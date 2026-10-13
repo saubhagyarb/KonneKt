@@ -152,6 +152,8 @@
     <string name="clock_face_bubble">Bubble</string>
     <string name="clock_face_neon">Neon orbit</string>
     <string name="clock_face_dot_matrix">LED</string>
+    <string name="clock_face_solar">Solar</string>
+    <string name="clock_face_analog">Classic Analog</string>
     <string name="clock_am">AM</string>
     <string name="clock_pm">PM</string>
     <string name="standby_battery">%1$d%% battery</string>

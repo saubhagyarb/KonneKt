@@ -94,6 +94,8 @@ fun ClockFaceContent(face: ClockFace, time: ClockTime, is24h: Boolean, reducedMo
         ClockFace.BUBBLE -> BubbleMorphFace(time, is24h, reducedMotion, modifier)
         ClockFace.NEON -> NeonOrbitFace(time, reducedMotion, modifier)
         ClockFace.DOT_MATRIX -> DotMatrixFace(time, is24h, reducedMotion, modifier)
+        ClockFace.SOLAR -> SolarDigitalFace(time, is24h, reducedMotion, modifier)
+        ClockFace.ANALOG -> ClassicAnalogFace(time, reducedMotion, modifier)
     }
 }
 
@@ -103,4 +105,6 @@ val ClockFace.labelRes: Int
         ClockFace.BUBBLE -> R.string.clock_face_bubble
         ClockFace.NEON -> R.string.clock_face_neon
         ClockFace.DOT_MATRIX -> R.string.clock_face_dot_matrix
+        ClockFace.SOLAR -> R.string.clock_face_solar
+        ClockFace.ANALOG -> R.string.clock_face_analog
     }
