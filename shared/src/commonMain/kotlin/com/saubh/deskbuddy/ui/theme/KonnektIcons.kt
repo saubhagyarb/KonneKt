@@ -65,4 +65,6 @@ object KonnektIcons {
     val Code = Icons.Rounded.Code
     val GraphicEq = Icons.Rounded.GraphicEq
     val Dashboard = Icons.Rounded.SpaceDashboard
+    val Warning = Icons.Rounded.Warning
+    val Security = Icons.Rounded.Security
 }

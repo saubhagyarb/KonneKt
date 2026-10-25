@@ -62,6 +62,13 @@
     <string name="home_dock_text">Plug in your phone and turn it sideways: KonneKt starts by itself and shows standby. Android needs two permissions for that.</string>
     <string name="home_dock_allow_overlay">Allow display over apps</string>
     <string name="home_dock_allow_background">Allow in background</string>
+
+    <!-- App Settings / Toggles -->
+    <string name="home_settings_title">App Features &amp; Settings</string>
+    <string name="home_auto_standby_title">Auto Standby on Dock / Charge</string>
+    <string name="home_auto_standby_desc">Open standby clock mode automatically when charging in landscape orientation</string>
+    <string name="home_auto_connect_title">Auto-connect on Wi-Fi</string>
+    <string name="home_auto_connect_desc">Search and connect to paired PCs automatically when on Wi-Fi</string>
     <string name="power_lock">Lock</string>
     <string name="power_restart">Restart</string>
     <string name="power_shutdown">Shut down</string>

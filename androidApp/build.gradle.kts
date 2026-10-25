@@ -60,6 +60,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -73,5 +74,21 @@ android {
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
     buildFeatures {
         compose = true
+    }
+}
+
+val copyReleaseApk = tasks.register<Copy>("copyReleaseApk") {
+    val apkDir = layout.buildDirectory.dir("outputs/apk/release")
+    from(apkDir)
+    include("*.apk")
+    into(layout.projectDirectory.dir("release"))
+}
+
+afterEvaluate {
+    tasks.findByName("assembleRelease")?.let { assembleTask ->
+        copyReleaseApk.configure {
+            mustRunAfter(assembleTask)
+        }
+        assembleTask.finalizedBy(copyReleaseApk)
     }
 }

@@ -2,16 +2,22 @@
 
 package com.saubh.deskbuddy.ui
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,9 +39,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.saubh.deskbuddy.protocol.Protocol
+import com.saubh.deskbuddy.server.DesktopPermissionState
 import com.saubh.deskbuddy.server.ServerState
 import com.saubh.deskbuddy.ui.components.IconAvatar
 import com.saubh.deskbuddy.ui.components.MediumOutlinedButton
+import com.saubh.deskbuddy.ui.components.MediumTonalButton
 import com.saubh.deskbuddy.ui.components.cookieShape
 import com.saubh.deskbuddy.ui.theme.KonnektIcons
 import kotlinx.coroutines.delay
@@ -43,7 +51,7 @@ import kotlinx.coroutines.delay
 /** Start-at-login switch state; null hides the card (Linux). [inMenuBar] words it for macOS. */
 data class StartupSetting(val enabled: Boolean, val onChange: (Boolean) -> Unit, val inMenuBar: Boolean = false)
 
-/** Home pane: one hero card whose content follows the server state, address chips, and the startup switch. */
+/** Home pane: one hero card whose content follows the server state, address chips, system permissions card, and the startup switch. */
 @Composable
 fun StatusPanel(
     state: ServerState,
@@ -53,41 +61,231 @@ fun StatusPanel(
     mediaHelperAvailable: Boolean,
     keyboardLabel: String,
     startup: StartupSetting?,
+    permissions: DesktopPermissionState,
+    onCheckPermissions: () -> Unit,
+    onOpenMacAccessibility: () -> Unit,
+    onOpenMacAutomation: () -> Unit,
+    onOpenWindowsFirewall: () -> Unit,
     onUnpairAll: () -> Unit,
 ) {
-    Column(Modifier.widthIn(max = 640.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        when (state) {
-            is ServerState.Waiting -> WaitingHero()
-            is ServerState.Pairing -> PairingHero(state.pin)
-            is ServerState.Connected -> ConnectedHero(state.devices, onUnpairAll)
+    val scrollState = rememberScrollState()
+    Box(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .widthIn(max = 640.dp)
+                .fillMaxSize()
+                .padding(end = 16.dp)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            when (state) {
+                is ServerState.Waiting -> WaitingHero()
+                is ServerState.Pairing -> PairingHero(state.pin)
+                is ServerState.Connected -> ConnectedHero(state.devices, onUnpairAll)
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AssistChip(
+                    onClick = {},
+                    label = { Text(hostName) },
+                    leadingIcon = { Icon(KonnektIcons.Computer, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    shape = CircleShape,
+                )
+                AssistChip(
+                    onClick = {},
+                    label = { Text("$ipAddress : $port") },
+                    leadingIcon = { Icon(KonnektIcons.Wifi, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    shape = CircleShape,
+                )
+                AssistChip(
+                    onClick = {},
+                    label = { Text(if (mediaHelperAvailable) "Now playing: on" else "Now playing: unavailable") },
+                    leadingIcon = { Icon(KonnektIcons.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    shape = CircleShape,
+                )
+                AssistChip(
+                    onClick = {},
+                    label = { Text(keyboardLabel) },
+                    leadingIcon = { Icon(KonnektIcons.Keyboard, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    shape = CircleShape,
+                )
+            }
+            PermissionsCard(
+                permissions = permissions,
+                onCheckPermissions = onCheckPermissions,
+                onOpenMacAccessibility = onOpenMacAccessibility,
+                onOpenMacAutomation = onOpenMacAutomation,
+                onOpenWindowsFirewall = onOpenWindowsFirewall,
+            )
+            startup?.let { StartupCard(it) }
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            AssistChip(
-                onClick = {},
-                label = { Text(hostName) },
-                leadingIcon = { Icon(KonnektIcons.Computer, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                shape = CircleShape,
+        VerticalScrollbar(
+            adapter = rememberScrollbarAdapter(scrollState),
+            modifier = Modifier.align(Alignment.CenterEnd),
+        )
+    }
+}
+
+@Composable
+private fun PermissionsCard(
+    permissions: DesktopPermissionState,
+    onCheckPermissions: () -> Unit,
+    onOpenMacAccessibility: () -> Unit,
+    onOpenMacAutomation: () -> Unit,
+    onOpenWindowsFirewall: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    LaunchedEffect(Unit) {
+        onCheckPermissions()
+    }
+
+    Card(
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = if (permissions.isMac && !permissions.allMacPermissionsGranted) {
+                scheme.errorContainer.copy(alpha = 0.25f)
+            } else {
+                scheme.surfaceContainerLow
+            }
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        KonnektIcons.Security,
+                        contentDescription = null,
+                        tint = if (permissions.isMac && !permissions.allMacPermissionsGranted) scheme.error else scheme.primary,
+                    )
+                    Column {
+                        Text(
+                            "System Permissions & Access",
+                            style = MaterialTheme.typography.titleMediumEmphasized,
+                        )
+                        Text(
+                            if (permissions.isMac) {
+                                if (permissions.allMacPermissionsGranted) "All required macOS permissions are granted"
+                                else "Allow macOS permissions so your phone can control this Mac"
+                            } else {
+                                "Windows firewall and app privilege permissions"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = scheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                MediumOutlinedButton(
+                    text = "Re-check",
+                    onClick = onCheckPermissions,
+                    icon = KonnektIcons.Refresh,
+                )
+            }
+
+            if (permissions.isMac) {
+                // Item 1: Accessibility
+                PermissionRow(
+                    title = "Accessibility Permission",
+                    description = "Required so your phone can type remotely into Mac apps, use media keys, and close or switch windows.",
+                    granted = permissions.macAccessibilityGranted,
+                    actionLabel = if (permissions.macAccessibilityGranted) "Open Settings" else "Grant Accessibility",
+                    onAction = onOpenMacAccessibility,
+                )
+
+                // Item 2: Automation
+                PermissionRow(
+                    title = "Automation Permission (System Events & Music)",
+                    description = "Required so KonneKt can control Apple Music / Spotify playback and list open windows or browser tabs.",
+                    granted = permissions.macAutomationGranted,
+                    actionLabel = if (permissions.macAutomationGranted) "Open Settings" else "Grant Automation",
+                    onAction = onOpenMacAutomation,
+                )
+            } else if (permissions.isWindows) {
+                // Windows Firewall
+                PermissionRow(
+                    title = "Windows Defender Firewall",
+                    description = "Ensure KonneKt is allowed through Windows Defender Firewall for local Wi-Fi connections.",
+                    granted = true,
+                    actionLabel = "Firewall Settings",
+                    onAction = onOpenWindowsFirewall,
+                )
+                // Windows UIPI / Admin
+                PermissionRow(
+                    title = "Administrator Applications (UIPI)",
+                    description = "Windows blocks controlling apps running as Administrator (e.g. Task Manager). To type into elevated apps, launch KonneKt as Administrator.",
+                    granted = true,
+                    actionLabel = null,
+                    onAction = {},
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionRow(
+    title: String,
+    description: String,
+    granted: Boolean,
+    actionLabel: String?,
+    onAction: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Icon(
+            if (granted) KonnektIcons.CheckCircle else KonnektIcons.Warning,
+            contentDescription = null,
+            tint = if (granted) scheme.primary else scheme.error,
+            modifier = Modifier.size(24.dp),
+        )
+        Column(Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(title, style = MaterialTheme.typography.titleSmallEmphasized)
+                AssistChip(
+                    onClick = {},
+                    label = { Text(if (granted) "Granted" else "Action Required", style = MaterialTheme.typography.labelSmall) },
+                    leadingIcon = {
+                        Icon(
+                            if (granted) KonnektIcons.Check else KonnektIcons.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                        )
+                    },
+                    shape = CircleShape,
+                )
+            }
+            Text(description, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+        }
+        if (actionLabel != null && !granted) {
+            MediumTonalButton(
+                text = actionLabel,
+                onClick = onAction,
+                icon = KonnektIcons.Lock,
             )
-            AssistChip(
-                onClick = {},
-                label = { Text("$ipAddress : $port") },
-                leadingIcon = { Icon(KonnektIcons.Wifi, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                shape = CircleShape,
-            )
-            AssistChip(
-                onClick = {},
-                label = { Text(if (mediaHelperAvailable) "Now playing: on" else "Now playing: unavailable") },
-                leadingIcon = { Icon(KonnektIcons.MusicNote, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                shape = CircleShape,
-            )
-            AssistChip(
-                onClick = {},
-                label = { Text(keyboardLabel) },
-                leadingIcon = { Icon(KonnektIcons.Keyboard, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                shape = CircleShape,
+        } else if (actionLabel != null) {
+            MediumOutlinedButton(
+                text = actionLabel,
+                onClick = onAction,
+                icon = KonnektIcons.OpenInNew,
             )
         }
-        startup?.let { StartupCard(it) }
     }
 }
 

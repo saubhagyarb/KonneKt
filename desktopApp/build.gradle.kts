@@ -23,7 +23,7 @@ compose.desktop {
         jvmArgs += listOf("-Xms32m", "-Xmx256m", "-XX:+UseSerialGC")
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(TargetFormat.Dmg, TargetFormat.Pkg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Exe)
             // From ./gradlew :desktopApp:suggestRuntimeModules (Ktor, JNA, StartupRegistration).
             modules("java.instrument", "java.management", "jdk.unsupported")
             packageName = "KonneKt"
@@ -51,5 +51,35 @@ compose.desktop {
                 iconFile.set(project.file("icons/deskbuddy.png"))
             }
         }
+    }
+}
+
+val signMacApp = tasks.register<Exec>("signMacApp") {
+    val appDir = layout.buildDirectory.dir("compose/binaries/main/app/KonneKt.app")
+    val dmgFile = layout.buildDirectory.file("compose/binaries/main/dmg/KonneKt-1.0.0.dmg")
+
+    onlyIf {
+        System.getProperty("os.name").lowercase().contains("mac")
+    }
+
+    commandLine(
+        "sh",
+        "-c",
+        "codesign -f --deep -s - '${appDir.get().asFile.absolutePath}' 2>/dev/null || true; [ -f '${dmgFile.get().asFile.absolutePath}' ] && codesign -f -s - '${dmgFile.get().asFile.absolutePath}' 2>/dev/null || true"
+    )
+}
+
+afterEvaluate {
+    tasks.findByName("packageDmg")?.let { pkgTask ->
+        signMacApp.configure {
+            mustRunAfter(pkgTask)
+        }
+        pkgTask.finalizedBy(signMacApp)
+    }
+    tasks.findByName("createDistributable")?.let { distTask ->
+        signMacApp.configure {
+            mustRunAfter(distTask)
+        }
+        distTask.finalizedBy(signMacApp)
     }
 }

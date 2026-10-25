@@ -47,6 +47,7 @@ fun ServerScreen(controller: DesktopController) {
     val helperAvailable by controller.mediaHelperAvailable.collectAsState()
     val startAtLogin by controller.startAtLogin.collectAsState()
     val hotkey by controller.hotkeyAvailable.collectAsState()
+    val permissions by controller.permissions.collectAsState()
     val snackbar = remember { SnackbarHostState() }
     var destination by remember { mutableStateOf(Destination.STATUS) }
 
@@ -97,6 +98,11 @@ fun ServerScreen(controller: DesktopController) {
                                 } else {
                                     null
                                 },
+                                permissions = permissions,
+                                onCheckPermissions = controller::checkPermissions,
+                                onOpenMacAccessibility = controller::openMacAccessibilitySettings,
+                                onOpenMacAutomation = controller::openMacAutomationSettings,
+                                onOpenWindowsFirewall = controller::openWindowsFirewallSettings,
                                 onUnpairAll = controller::unpairAll,
                             )
                             Destination.SHARE -> SharePanel(controller)

@@ -5,10 +5,10 @@ package com.saubh.deskbuddy.ui.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,10 +18,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -79,6 +81,92 @@ fun PcStatusCard(pcName: String, reconnectAttempt: Int?, onPower: (PowerAction) 
                     tile,
                     scheme.surfaceContainerLowest,
                     iconTint = scheme.error,
+                )
+            }
+        }
+    }
+}
+
+/** App features & settings card allowing users to toggle Auto Standby and Auto-connect on Wi-Fi. */
+@Composable
+fun SettingsCard(
+    autoStandbyEnabled: Boolean,
+    onToggleAutoStandby: (Boolean) -> Unit,
+    autoConnectEnabled: Boolean,
+    onToggleAutoConnect: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    Card(
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerHigh),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(
+            Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    KonnektIcons.Dashboard,
+                    contentDescription = null,
+                    tint = scheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                Text(
+                    stringResource(R.string.home_settings_title),
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                )
+            }
+
+            // Setting 1: Auto Standby on Dock / Charge
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.home_auto_standby_title),
+                        style = MaterialTheme.typography.titleSmallEmphasized,
+                    )
+                    Text(
+                        stringResource(R.string.home_auto_standby_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = autoStandbyEnabled,
+                    onCheckedChange = onToggleAutoStandby,
+                )
+            }
+
+            HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.4f))
+
+            // Setting 2: Auto-connect on Wi-Fi
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.home_auto_connect_title),
+                        style = MaterialTheme.typography.titleSmallEmphasized,
+                    )
+                    Text(
+                        stringResource(R.string.home_auto_connect_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = scheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = autoConnectEnabled,
+                    onCheckedChange = onToggleAutoConnect,
                 )
             }
         }

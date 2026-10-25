@@ -136,13 +136,37 @@ class DesktopController(private val scope: CoroutineScope) {
     private val _notice = MutableStateFlow<String?>(null)
     val notice: StateFlow<String?> = _notice.asStateFlow()
 
+    private val _permissions = MutableStateFlow(com.saubh.deskbuddy.server.DesktopPermissions.check())
+    val permissions: StateFlow<com.saubh.deskbuddy.server.DesktopPermissionState> = _permissions.asStateFlow()
+
     private var transferJob: Job? = null
     private var runningAppsJob: Job? = null
+
+    fun checkPermissions() {
+        scope.launch(Dispatchers.IO) {
+            _permissions.value = com.saubh.deskbuddy.server.DesktopPermissions.check()
+        }
+    }
+
+    fun openMacAccessibilitySettings() {
+        com.saubh.deskbuddy.server.DesktopPermissions.openMacAccessibilitySettings()
+        checkPermissions()
+    }
+
+    fun openMacAutomationSettings() {
+        com.saubh.deskbuddy.server.DesktopPermissions.openMacAutomationSettings()
+        checkPermissions()
+    }
+
+    fun openWindowsFirewallSettings() {
+        com.saubh.deskbuddy.server.DesktopPermissions.openWindowsFirewallSettings()
+    }
 
     fun start() {
         server.start()
         // Slow first-run work (registry/LaunchAgent, one JmDNS per adapter, the app scan) must not delay the tray.
         scope.launch(Dispatchers.IO) {
+            checkPermissions()
             if (supportsStartAtLogin) _startAtLogin.value = runCatching { startup.sync() }.getOrDefault(false)
             // macOS drops synthetic keys and clicks silently until the user allows this app.
             if (isMac && !MacKeyboardActuator.isTrusted()) {

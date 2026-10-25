@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.hardware.SensorManager
 import android.os.BatteryManager
 import android.view.OrientationEventListener
+import com.saubh.deskbuddy.prefs.StandbyPrefs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class AutoStandbyManager(
     private val context: Context,
+    private val standbyPrefs: StandbyPrefs,
     private val onPowerConnected: () -> Unit = {},
 ) {
 
@@ -28,6 +30,9 @@ class AutoStandbyManager(
     private var orientationListener: OrientationEventListener? = null
     private var started = false
     private var isCharging = false
+
+    @Volatile
+    private var userEnabled = true
 
     /** Set while the PC types into the phone: jumping to standby would steal focus from the target app. */
     @Volatile
@@ -55,6 +60,16 @@ class AutoStandbyManager(
         }
     }
 
+    fun setUserEnabled(enabled: Boolean) {
+        userEnabled = enabled
+        if (!enabled) {
+            updateState(false)
+            stopOrientationListener()
+        } else if (isCharging) {
+            startOrientationListener()
+        }
+    }
+
     fun setSuppressed(value: Boolean) {
         suppressed = value
         if (value) updateState(false)
@@ -65,9 +80,9 @@ class AutoStandbyManager(
         if (visible) launcher.dismiss()
     }
 
-    /** Only while charging: the sensor costs nothing worth saving while plugged in. */
+    /** Only while charging and user enabled: the sensor costs nothing worth saving while plugged in. */
     private fun updateSensor() {
-        if (isCharging) startOrientationListener() else stopOrientationListener()
+        if (isCharging && userEnabled) startOrientationListener() else stopOrientationListener()
     }
 
     fun start() {
@@ -96,6 +111,7 @@ class AutoStandbyManager(
     }
 
     private fun startOrientationListener() {
+        if (!userEnabled) return
         if (orientationListener == null) {
             orientationListener = object : OrientationEventListener(context, SensorManager.SENSOR_DELAY_NORMAL) {
                 override fun onOrientationChanged(orientation: Int) {
@@ -113,12 +129,13 @@ class AutoStandbyManager(
     }
 
     private fun updateState(autoStandby: Boolean) {
-        if (autoStandby && suppressed) return
-        if (_isAutoStandby.value == autoStandby) return
-        _isAutoStandby.value = autoStandby
+        val target = autoStandby && userEnabled
+        if (target && suppressed) return
+        if (_isAutoStandby.value == target) return
+        _isAutoStandby.value = target
 
         when {
-            !autoStandby -> launcher.dismiss()
+            !target -> launcher.dismiss()
             !uiVisible -> launcher.open()
         }
     }

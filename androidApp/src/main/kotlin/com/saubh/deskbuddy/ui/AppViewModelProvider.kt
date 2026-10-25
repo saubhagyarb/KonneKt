@@ -23,7 +23,7 @@ object AppViewModelProvider {
         initializer { DevicesViewModel(graph().session, graph().autoConnector) }
         initializer {
             val g = graph()
-            HomeViewModel(g.session, g.media, g.apps, g.share, g.files, g.power)
+            HomeViewModel(g.session, g.media, g.apps, g.share, g.files, g.power, g.standbyPrefs)
         }
         initializer { MediaViewModel(graph().media) }
         initializer { AppsViewModel(graph().apps, graph().runningApps) }

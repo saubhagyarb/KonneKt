@@ -1,18 +1,28 @@
 package com.saubh.deskbuddy.ui.standby.clock
 
+import android.content.Context
+import android.os.BatteryManager
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameMillis
@@ -21,11 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,6 +51,13 @@ private const val PREVIEW_DATE_MS = 1_760_000_000_000L
 fun ClassicAnalogFace(time: ClockTime, reducedMotion: Boolean, modifier: Modifier = Modifier) {
     val smooth = rememberSmoothSeconds(enabled = !reducedMotion && !LocalInspectionMode.current, fallback = time.second.toFloat())
     val inspecting = LocalInspectionMode.current
+    val context = LocalContext.current
+    val battery by produceState(remember(context) { batteryPercent(context, inspecting) }) {
+        while (true) {
+            delay(60_000L)
+            value = batteryPercent(context, inspecting)
+        }
+    }
     
     Row(
         modifier = modifier.fillMaxSize().padding(horizontal = 24.dp),
@@ -119,6 +138,31 @@ fun ClassicAnalogFace(time: ClockTime, reducedMotion: Boolean, modifier: Modifie
                     fontFamily = FontFamily.SansSerif,
                     letterSpacing = 6.sp
                 )
+                
+                Spacer(Modifier.height(32.dp))
+                
+                if (battery >= 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(50))
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Box(
+                            Modifier
+                                .size(8.dp)
+                                .background(if (battery > 20) Color(0xFF34C759) else Color(0xFFFF3B30), CircleShape)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "$battery%",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
             }
         }
     }
@@ -141,3 +185,6 @@ private fun rememberSmoothSeconds(enabled: Boolean, fallback: Float): State<Floa
             }
         }
     }
+
+private fun batteryPercent(context: Context, inspecting: Boolean): Int = if (inspecting) -1 else
+    (context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager)?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1

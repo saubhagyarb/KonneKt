@@ -69,6 +69,8 @@ fun HomeRoute(
         onCancelTransfer = viewModel::cancelTransfer,
         onLaunch = viewModel::launch,
         onNavigate = onNavigate,
+        onToggleAutoStandby = viewModel::setAutoStandbyEnabled,
+        onToggleAutoConnect = viewModel::setAutoConnectEnabled,
         dockSetup = dockSetup,
         onAllowOverlay = { runCatching { context.startActivity(DockPermissions.overlaySettings(context)) } },
         onAllowBackground = {
@@ -78,7 +80,7 @@ fun HomeRoute(
     )
 }
 
-/** Dashboard: PC + power, what is playing, the everyday actions, and pinned apps. */
+/** Dashboard: PC + power, feature toggles, what is playing, the everyday actions, and pinned apps. */
 @Composable
 fun HomeScreen(
     state: HomeUiState,
@@ -90,6 +92,8 @@ fun HomeScreen(
     onCancelTransfer: () -> Unit,
     onLaunch: (String) -> Unit,
     onNavigate: (Destination) -> Unit,
+    onToggleAutoStandby: (Boolean) -> Unit = {},
+    onToggleAutoConnect: (Boolean) -> Unit = {},
     dockSetup: DockSetup = DockSetup(),
     onAllowOverlay: () -> Unit = {},
     onAllowBackground: () -> Unit = {},
@@ -109,7 +113,16 @@ fun HomeScreen(
                 modifier = column,
             )
         }
-        if (!dockSetup.ready) {
+        item(key = "settings") {
+            SettingsCard(
+                autoStandbyEnabled = state.autoStandbyEnabled,
+                onToggleAutoStandby = onToggleAutoStandby,
+                autoConnectEnabled = state.autoConnectEnabled,
+                onToggleAutoConnect = onToggleAutoConnect,
+                modifier = column,
+            )
+        }
+        if (!dockSetup.ready && state.autoStandbyEnabled) {
             item(key = "dock") { DockSetupCard(dockSetup, onAllowOverlay, onAllowBackground, column) }
         }
         state.transfer?.let { transfer ->

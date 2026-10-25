@@ -1,6 +1,7 @@
 package com.saubh.deskbuddy.prefs
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -14,9 +15,27 @@ import java.io.IOException
 
 private val Context.standbyStore by preferencesDataStore(name = "standby_prefs")
 
-/** The clock face last swiped to. A read failure falls back to the default face rather than breaking standby. */
+/** Feature settings and standby preferences. */
 class StandbyPrefs(private val context: Context) : ClockFaceStore {
     private val faceKey = stringPreferencesKey("clock_face")
+    private val autoStandbyKey = booleanPreferencesKey("auto_standby_enabled")
+    private val autoConnectKey = booleanPreferencesKey("auto_connect_enabled")
+
+    val autoStandbyEnabled: Flow<Boolean> = context.standbyStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { it[autoStandbyKey] ?: true }
+
+    suspend fun setAutoStandbyEnabled(enabled: Boolean) {
+        context.standbyStore.edit { it[autoStandbyKey] = enabled }
+    }
+
+    val autoConnectEnabled: Flow<Boolean> = context.standbyStore.data
+        .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }
+        .map { it[autoConnectKey] ?: true }
+
+    suspend fun setAutoConnectEnabled(enabled: Boolean) {
+        context.standbyStore.edit { it[autoConnectKey] = enabled }
+    }
 
     override val face: Flow<ClockFace> = context.standbyStore.data
         .catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }

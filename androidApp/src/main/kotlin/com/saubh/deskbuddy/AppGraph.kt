@@ -76,12 +76,18 @@ class AppGraph(context: Context) {
     val keyboardHub = RemoteKeyboardHub(session, scope)
 
     // Plugging in should connect now, not after auto-connect's current (up to 5 min) backoff.
-    val autoStandby = AutoStandbyManager(app, onPowerConnected = { autoConnector.nudge() })
+    val autoStandby = AutoStandbyManager(app, standbyPrefs = standbyPrefs, onPowerConnected = { autoConnector.nudge() })
 
     init {
         scope.launch {
             combine(keyboardHub.pcTyping, keyboardHub.imeBound) { typing, bound -> typing || bound }
                 .collect(autoStandby::setSuppressed)
+        }
+        scope.launch {
+            standbyPrefs.autoStandbyEnabled.collect(autoStandby::setUserEnabled)
+        }
+        scope.launch {
+            standbyPrefs.autoConnectEnabled.collect(autoConnector::setUserEnabled)
         }
     }
 }

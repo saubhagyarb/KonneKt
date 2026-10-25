@@ -51,6 +51,14 @@ class AutoConnector(
         }
     }
 
+    @Volatile
+    private var userEnabled = true
+
+    fun setUserEnabled(enabled: Boolean) {
+        userEnabled = enabled
+        if (enabled) nudge()
+    }
+
     /** Try now instead of waiting for the next tick. */
     fun nudge() {
         wake.trySend(Unit)
@@ -58,7 +66,7 @@ class AutoConnector(
 
     /** True when it probed at least one paired PC and none answered. */
     private suspend fun attempt(): Boolean {
-        if (!session.isSearching || session.autoConnectPaused) return false
+        if (!userEnabled || !session.isSearching || session.autoConnectPaused) return false
         val all = AutoConnectPlan.candidates(session.savedDesktops.value, session.discovered.value)
         val onLan = isOnLan()
         val candidates = AutoConnectPlan.reachable(all, onLan, if (onLan) emptyList() else localSubnets())
