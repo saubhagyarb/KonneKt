@@ -1,8 +1,11 @@
 package com.saubh.deskbuddy
 
 import com.saubh.deskbuddy.protocol.Protocol
-import java.net.HttpURLConnection
+import com.saubh.deskbuddy.server.DesktopTlsIdentity
+import java.security.SecureRandom
 import java.net.URI
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLContext
 
 /**
  * Detects a copy of DeskBuddy already running on this PC (it owns the control port) and,
@@ -14,7 +17,11 @@ object SingleInstance {
     /** True when another instance answered; the caller should then exit. */
     fun handOffToRunningInstance(show: Boolean): Boolean = runCatching {
         val path = if (show) "/show" else "/info"
-        val connection = URI("http://127.0.0.1:${Protocol.PORT}$path").toURL().openConnection() as HttpURLConnection
+        val identity = DesktopTlsIdentity()
+        val connection = URI("https://127.0.0.1:${Protocol.PORT}$path").toURL().openConnection() as HttpsURLConnection
+        connection.sslSocketFactory = SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf(identity.localTrustManager()), SecureRandom())
+        }.socketFactory
         connection.connectTimeout = TIMEOUT_MS
         connection.readTimeout = TIMEOUT_MS
         try {

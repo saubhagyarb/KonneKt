@@ -13,6 +13,7 @@ import com.saubh.deskbuddy.server.ClipboardWatcher
 import com.saubh.deskbuddy.server.ControlServer
 import com.saubh.deskbuddy.server.DeskBuddyAdvertiser
 import com.saubh.deskbuddy.server.DesktopIdentity
+import com.saubh.deskbuddy.server.DesktopTlsIdentity
 import com.saubh.deskbuddy.server.FileSender
 import com.saubh.deskbuddy.server.HostOs
 import com.saubh.deskbuddy.server.MacPasteboard
@@ -48,17 +49,30 @@ import java.awt.Desktop
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicLong
+
+private val inboxItemIdSequence = AtomicLong()
 
 /** Owns the server and everything the desktop window can do; UI observes its flows. */
 class DesktopController(private val scope: CoroutineScope) {
 
     sealed class InboxItem {
+        abstract val id: Long
         abstract val receivedAt: Long
-        data class Text(val text: String, override val receivedAt: Long) : InboxItem()
-        data class File(val path: Path, override val receivedAt: Long) : InboxItem()
+        data class Text(
+            val text: String,
+            override val receivedAt: Long,
+            override val id: Long = inboxItemIdSequence.incrementAndGet(),
+        ) : InboxItem()
+        data class File(
+            val path: Path,
+            override val receivedAt: Long,
+            override val id: Long = inboxItemIdSequence.incrementAndGet(),
+        ) : InboxItem()
     }
 
     private val store = PairedDeviceStore()
+    private val tlsIdentity = DesktopTlsIdentity()
     private val actuators = ActuatorFactory.create(
         onTextShared = { addToInbox(InboxItem.Text(it, System.currentTimeMillis())) },
         onFileReceived = { addToInbox(InboxItem.File(it, System.currentTimeMillis())) },
@@ -72,6 +86,7 @@ class DesktopController(private val scope: CoroutineScope) {
         store = store,
         actuators = actuators,
         desktopId = DesktopIdentity().id,
+        tlsIdentity = tlsIdentity,
         onShowRequested = { _showRequests.tryEmit(Unit) },
         // A fast reconnect never passes through "no phone": re-announce typing mode to the new socket.
         onPhoneAuthenticated = { typing.phoneReconnected() },
@@ -80,8 +95,8 @@ class DesktopController(private val scope: CoroutineScope) {
     val isWindows: Boolean = HostOs.isWindows()
     val isMac: Boolean = HostOs.isMac()
 
-    /** Start-at-login exists on Windows (registry) and macOS (LaunchAgent). */
-    val supportsStartAtLogin: Boolean = isWindows || isMac
+    /** A macOS login item must point to the packaged .app, never a Gradle hot-reload JVM. */
+    val supportsStartAtLogin: Boolean = isWindows || (isMac && !System.getProperty("jpackage.app-path").isNullOrBlank())
 
     /** One consumer keeps the PC's keystrokes in order on their way to the phone. */
     private val keyOutbox = Channel<Command>(Channel.UNLIMITED)
@@ -124,6 +139,7 @@ class DesktopController(private val scope: CoroutineScope) {
     val autoSyncClipboard = MutableStateFlow(true)
     val receivedDirectory: Path = actuators.files.directory
     val port: Int = Protocol.PORT
+    val certificateFingerprint: String = tlsIdentity.fingerprint
     val hostName: String = runCatching { InetAddress.getLocalHost().hostName }.getOrDefault("Unknown")
     val ipAddress: String = lanIpAddress()
 

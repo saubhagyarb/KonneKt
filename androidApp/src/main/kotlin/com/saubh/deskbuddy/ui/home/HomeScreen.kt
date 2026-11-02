@@ -1,16 +1,16 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package com.saubh.deskbuddy.ui.home
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +38,7 @@ import com.saubh.deskbuddy.ui.components.ContentMaxWidth
 import com.saubh.deskbuddy.ui.components.InfoCard
 import com.saubh.deskbuddy.ui.components.ScreenPadding
 import com.saubh.deskbuddy.ui.components.SectionHeader
+import com.saubh.deskbuddy.ui.isWideWindow
 import com.saubh.deskbuddy.ui.share.TransferCard
 import com.saubh.deskbuddy.ui.shell.Destination
 import com.saubh.deskbuddy.ui.theme.KonnektIcons
@@ -105,7 +106,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item(key = "status") {
+        item(key = "status", contentType = "status-card") {
             PcStatusCard(
                 pcName = state.pcName,
                 reconnectAttempt = state.reconnectAttempt,
@@ -113,7 +114,7 @@ fun HomeScreen(
                 modifier = column,
             )
         }
-        item(key = "settings") {
+        item(key = "settings", contentType = "settings-card") {
             SettingsCard(
                 autoStandbyEnabled = state.autoStandbyEnabled,
                 onToggleAutoStandby = onToggleAutoStandby,
@@ -123,30 +124,38 @@ fun HomeScreen(
             )
         }
         if (!dockSetup.ready && state.autoStandbyEnabled) {
-            item(key = "dock") { DockSetupCard(dockSetup, onAllowOverlay, onAllowBackground, column) }
-        }
-        state.transfer?.let { transfer ->
-            item(key = "transfer") { TransferCard(transfer, onCancelTransfer, column) }
-        }
-        item(key = "media") {
-            MiniPlayerCard(state.media, onOpen = { onNavigate(Destination.MEDIA) }, onPlayPause = onPlayPause, modifier = column)
-        }
-        item(key = "actions-header") { SectionHeader(stringResource(R.string.home_quick_actions), column.padding(top = 4.dp)) }
-        item(key = "actions") {
-            Row(column.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val tile = Modifier.weight(1f).fillMaxHeight()
-                ActionTile(KonnektIcons.Upload, stringResource(R.string.home_send_clipboard), onSendClipboard, tile)
-                ActionTile(KonnektIcons.Download, stringResource(R.string.home_get_clipboard), onPullClipboard, tile)
-                ActionTile(KonnektIcons.AttachFile, stringResource(R.string.home_send_file), onPickFile, tile)
-                ActionTile(KonnektIcons.Keyboard, stringResource(R.string.home_type), { onNavigate(Destination.KEYBOARD) }, tile)
+            item(key = "dock", contentType = "setup-card") {
+                DockSetupCard(dockSetup, onAllowOverlay, onAllowBackground, column.animateItem())
             }
         }
-        item(key = "shortcuts-header") {
+        state.transfer?.let { transfer ->
+            item(key = "transfer", contentType = "transfer-card") {
+                TransferCard(transfer, onCancelTransfer, column.animateItem())
+            }
+        }
+        item(key = "media", contentType = "media-card") {
+            MiniPlayerCard(state.media, onOpen = { onNavigate(Destination.MEDIA) }, onPlayPause = onPlayPause, modifier = column)
+        }
+        item(key = "actions-header", contentType = "section-header") { SectionHeader(stringResource(R.string.home_quick_actions), column.padding(top = 4.dp)) }
+        item(key = "actions", contentType = "quick-actions") {
+            FlowRow(
+                modifier = column,
+                maxItemsInEachRow = if (isWideWindow()) 4 else 2,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ActionTile(KonnektIcons.Upload, stringResource(R.string.home_send_clipboard), onSendClipboard, Modifier.weight(1f))
+                ActionTile(KonnektIcons.Download, stringResource(R.string.home_get_clipboard), onPullClipboard, Modifier.weight(1f))
+                ActionTile(KonnektIcons.AttachFile, stringResource(R.string.home_send_file), onPickFile, Modifier.weight(1f))
+                ActionTile(KonnektIcons.Keyboard, stringResource(R.string.home_type), { onNavigate(Destination.KEYBOARD) }, Modifier.weight(1f))
+            }
+        }
+        item(key = "shortcuts-header", contentType = "section-header") {
             SectionHeader(stringResource(R.string.home_shortcuts), column.padding(top = 4.dp)) {
                 TextButton(onClick = { onNavigate(Destination.APPS) }) { Text(stringResource(R.string.home_all_apps)) }
             }
         }
-        item(key = "shortcuts") {
+        item(key = "shortcuts", contentType = "shortcut-content") {
             if (state.shortcuts.isEmpty()) {
                 InfoCard(stringResource(R.string.home_no_shortcuts), column, icon = KonnektIcons.StarOutline)
             } else {

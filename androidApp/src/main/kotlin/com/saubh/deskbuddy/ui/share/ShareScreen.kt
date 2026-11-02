@@ -72,9 +72,9 @@ fun ShareScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item(key = "clipboard") { ClipboardCard(state.autoSync, onAutoSyncChange, onSendClipboard, onPullClipboard, column) }
-        item(key = "text") { SendTextCard(onSendText, column) }
-        item(key = "file") {
+        item(key = "clipboard", contentType = "clipboard-card") { ClipboardCard(state.autoSync, onAutoSyncChange, onSendClipboard, onPullClipboard, column) }
+        item(key = "text", contentType = "text-card") { SendTextCard(onSendText, column) }
+        item(key = "file", contentType = "file-transfer") {
             val transfer = state.transfer
             if (transfer != null) {
                 TransferCard(transfer, onCancelTransfer, column)
@@ -82,15 +82,17 @@ fun ShareScreen(
                 MediumOutlinedButton(stringResource(R.string.share_pick_file), onPickFile, column, icon = KonnektIcons.AttachFile)
             }
         }
-        item(key = "inbox-header") {
+        item(key = "inbox-header", contentType = "section-header") {
             SectionHeader(stringResource(R.string.share_inbox_title), column.padding(top = 12.dp), stringResource(R.string.share_inbox_hint)) {
                 if (state.inbox.isNotEmpty()) TextButton(onClick = { confirmClear = true }) { Text(stringResource(R.string.share_clear_inbox)) }
             }
         }
         if (state.inbox.isEmpty()) {
-            item(key = "inbox-empty") { InfoCard(stringResource(R.string.share_inbox_empty), column, icon = KonnektIcons.Inbox) }
+            item(key = "inbox-empty", contentType = "empty-state") { InfoCard(stringResource(R.string.share_inbox_empty), column, icon = KonnektIcons.Inbox) }
         } else {
-            items(state.inbox, key = { it.receivedAt.toString() + it.hashCode() }) { InboxRow(it, onCopy, column) }
+            items(state.inbox, key = { it.id }, contentType = { "inbox-item" }) { item ->
+                InboxRow(item, onCopy, column.animateItem())
+            }
         }
     }
     if (confirmClear) {

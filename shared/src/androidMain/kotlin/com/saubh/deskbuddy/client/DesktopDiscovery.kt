@@ -10,15 +10,21 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.launch
 
-/** [id] is the PC's stable id when known (the subnet sweep reads it from `/info`; mDNS does not carry it). */
-data class DiscoveredDesktop(val name: String, val host: String, val port: Int, val id: String = "")
+/** [id] and its TLS certificate fingerprint are filled from the desktop's HTTPS `/info` response. */
+data class DiscoveredDesktop(
+    val name: String,
+    val host: String,
+    val port: Int,
+    val id: String = "",
+    val certificateFingerprint: String = "",
+)
 
 /**
  * mDNS discovery via Android NSD. Resolves are serialised (Android rejects concurrent
  * resolves) and retried, and results are keyed by host so a PC advertising on two
  * adapters shows each reachable address.
  */
-class DesktopDiscovery(context: Context) {
+class DesktopDiscovery(context: Context, private val scanner: SubnetScanner? = null) {
 
     private companion object {
         const val MAX_RESOLVE_ATTEMPTS = 3
@@ -56,6 +62,15 @@ class DesktopDiscovery(context: Context) {
                             if (host != null) found[host] = DiscoveredDesktop(resolved.serviceName, host, resolved.port)
                         }
                         publish()
+                        if (host != null) launch {
+                            val verifiedInfo = scanner?.fetchInfo(host, resolved.port)
+                            if (verifiedInfo != null) {
+                                synchronized(lock) {
+                                    if (found[host]?.port == resolved.port) found[host] = verifiedInfo
+                                }
+                                publish()
+                            }
+                        }
                         resolveNext()
                     }
 

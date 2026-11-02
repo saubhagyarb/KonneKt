@@ -42,6 +42,9 @@ class AutoConnector(
         registerNetworkCallback()
         // A dropped connection should be retried now, not after a grown interval.
         scope.launch { session.connected.drop(1).collect { if (!it) nudge() } }
+        // A desktop can come back on a new DHCP address after reboot; don't wait for the backoff
+        // timer once discovery has found its new address.
+        scope.launch { session.discovered.drop(1).collect { if (it.isNotEmpty()) nudge() } }
         job = scope.launch {
             while (true) {
                 val missed = attempt()

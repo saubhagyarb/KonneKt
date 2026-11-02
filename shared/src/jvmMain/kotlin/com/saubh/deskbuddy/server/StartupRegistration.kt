@@ -7,8 +7,8 @@ import java.nio.file.Path
 
 /**
  * "Start at login": a per-user `Run` registry value on Windows, a LaunchAgent ([MacLaunchAgent]) on
- * macOS. Either launches this app hidden ([BACKGROUND_ARG]) at sign-in. On first launch it is
- * switched on by default.
+ * macOS. Either launches this app hidden ([BACKGROUND_ARG]) at sign-in. On first packaged launch it
+ * is switched on by default.
  */
 class StartupRegistration(
     private val command: () -> String? = { currentLaunchCommand() },
@@ -19,6 +19,11 @@ class StartupRegistration(
         fun read(): String?
         fun write(value: String)
         fun delete()
+
+        /** Platform-specific activation hooks; Windows stores its Run entry directly. */
+        fun enable() {}
+        fun ensureLoaded() {}
+        fun disable() {}
     }
 
     companion object {
@@ -29,13 +34,16 @@ class StartupRegistration(
         private val defaultArgFile: Path = Path.of(System.getProperty("user.home"), ".deskbuddy", "launch.args")
 
         /**
-         * The packaged launcher (jpackage sets `jpackage.app-path`). Otherwise (e.g. a Gradle
-         * `run`) the running JVM's options, classpath and main class are written to a Java
-         * `@argfile`, because Windows does not expose a process's arguments and a Gradle
-         * classpath can exceed the command-line limit.
+         * The packaged launcher (jpackage sets `jpackage.app-path`). Windows can also start a
+         * development JVM through an argfile. On macOS, only the packaged launcher is stable
+         * enough to persist as a login item; a Gradle hot-reload classpath is tied to the workspace.
          */
         fun currentLaunchCommand(argFile: Path = defaultArgFile): String? {
-            System.getProperty("jpackage.app-path")?.takeIf { it.isNotBlank() }?.let { return "${quote(it)} $BACKGROUND_ARG" }
+            System.getProperty("jpackage.app-path")?.takeIf { it.isNotBlank() }?.let {
+                val appPath = if (HostOs.isMac()) shellQuote(it) else quote(it)
+                return "$appPath $BACKGROUND_ARG"
+            }
+            if (HostOs.isMac()) return null
             val main = System.getProperty("sun.java.command")?.substringBefore(' ')?.takeIf { it.isNotBlank() } ?: return null
             val javaHome = System.getProperty("java.home") ?: return null
             // The console-less launcher on Windows, so no terminal window flashes up at sign-in; plain `java` on macOS.
@@ -54,6 +62,9 @@ class StartupRegistration(
         }
 
         private fun quote(arg: String) = "\"$arg\""
+
+        /** The Mac LaunchAgent passes this command through `/bin/sh -c`. */
+        private fun shellQuote(arg: String) = "'${arg.replace("'", "'\\''")}'"
     }
 
     object WindowsRegistry : Registry {
@@ -77,24 +88,35 @@ class StartupRegistration(
     val isEnabled: Boolean get() = registry.read() != null
 
     /**
-     * Called at every launch: turns startup on the first time, and refreshes the stored command
-     * when it is on (the app may have moved or been rebuilt). Returns whether it is on.
+     * Called at every packaged launch: turns startup on the first time, and refreshes the stored
+     * command when it is on (the app may have moved or been rebuilt). Returns whether it is on.
      */
     fun sync(): Boolean {
         val firstRun = !Files.exists(initializedMarker)
-        if (firstRun) {
-            runCatching {
-                Files.createDirectories(initializedMarker.parent)
-                Files.createFile(initializedMarker)
-            }
+        val enabled = isEnabled
+        if (!firstRun && !enabled) return false
+        val launchCommand = command() ?: return enabled
+        if (runCatching { registry.write(launchCommand) }.isFailure) return enabled
+        val activated = runCatching {
+            if (enabled) registry.ensureLoaded() else registry.enable()
+        }.isSuccess
+        if (!activated) return false
+        if (firstRun) runCatching {
+            Files.createDirectories(initializedMarker.parent)
+            Files.createFile(initializedMarker)
         }
-        if (firstRun || isEnabled) setEnabled(true)
-        return isEnabled
+        return true
     }
 
     /** Returns false when the launch command cannot be determined or the registry write fails. */
     fun setEnabled(enabled: Boolean): Boolean = runCatching {
-        if (enabled) registry.write(command() ?: return false) else registry.delete()
+        if (enabled) {
+            registry.write(command() ?: return false)
+            registry.enable()
+        } else {
+            registry.disable()
+            registry.delete()
+        }
         true
     }.getOrDefault(false)
 }

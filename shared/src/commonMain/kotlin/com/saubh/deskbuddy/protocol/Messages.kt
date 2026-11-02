@@ -178,9 +178,14 @@ data class SetVolumeCommand(val volume: Int) : Command()
 @SerialName("audio_device_set")
 data class SetAudioDeviceCommand(val id: String) : Command()
 
-/** Body of `GET /info`; lets the phone verify a swept host is DeskBuddy. Not a [Message]. [id] is stable per PC. */
+/** Body of `GET /info`; the fingerprint is compared with the desktop display before first pairing. */
 @Serializable
-data class DesktopInfo(val name: String, val port: Int, val id: String = "")
+data class DesktopInfo(
+    val name: String,
+    val port: Int,
+    val id: String = "",
+    val certificateFingerprint: String = "",
+)
 
 // ---- Power (M4) ---------------------------------------------------------
 

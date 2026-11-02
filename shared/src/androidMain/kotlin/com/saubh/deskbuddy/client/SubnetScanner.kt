@@ -8,7 +8,11 @@ import com.saubh.deskbuddy.protocol.WireCodec
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.HttpHeaders
+import io.ktor.utils.io.cancel
+import io.ktor.utils.io.readAvailable
+import javax.net.ssl.X509TrustManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -29,12 +33,28 @@ import java.net.Socket
 class SubnetScanner(
     context: Context,
     private val port: Int = Protocol.PORT,
-    private val http: HttpClient = HttpClient(CIO),
+    private val http: HttpClient = infoHttpClient(),
 ) {
     private companion object {
         const val PARALLELISM = 48
         const val CONNECT_TIMEOUT_MS = 400
         const val INFO_TIMEOUT_MS = 1_000L
+        const val MAX_INFO_RESPONSE_BYTES = 4 * 1024
+
+        fun infoHttpClient(): HttpClient = HttpClient(CIO) {
+            engine {
+                requestTimeout = 2_000
+                https {
+                    // /info contains no secret. Its fingerprint is verified against the desktop UI,
+                    // then the WebSocket client pins the actual certificate before sending credentials.
+                    trustManager = object : X509TrustManager {
+                        override fun getAcceptedIssuers() = emptyArray<java.security.cert.X509Certificate>()
+                        override fun checkClientTrusted(chain: Array<out java.security.cert.X509Certificate>?, authType: String?) = Unit
+                        override fun checkServerTrusted(chain: Array<out java.security.cert.X509Certificate>?, authType: String?) = Unit
+                    }
+                }
+            }
+        }
     }
 
     private val connectivity = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -61,10 +81,37 @@ class SubnetScanner(
 
     private suspend fun probe(host: String): DiscoveredDesktop? {
         if (!portOpen(host)) return null
-        return runCatching {
+        return fetchInfo(host, port)
+    }
+
+    /** Reads the public TLS identity before any pairing PIN or saved token is sent. */
+    suspend fun fetchInfo(host: String, requestedPort: Int = port): DiscoveredDesktop? = withContext(Dispatchers.IO) {
+        runCatching {
             withTimeout(INFO_TIMEOUT_MS) {
-                val info = WireCodec.decodeInfo(http.get("http://$host:$port/info").bodyAsText())
-                DiscoveredDesktop(info.name, host, info.port, info.id)
+                val uriHost = if (host.contains(':') && !host.startsWith('[')) "[$host]" else host
+                val response = http.get("https://$uriHost:$requestedPort/info")
+                val declaredLength = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()
+                val channel = response.bodyAsChannel()
+                if (declaredLength != null && declaredLength > MAX_INFO_RESPONSE_BYTES) {
+                    channel.cancel()
+                    return@withTimeout null
+                }
+                val bytes = ByteArray(MAX_INFO_RESPONSE_BYTES + 1)
+                var total = 0
+                while (total < bytes.size) {
+                    val read = channel.readAvailable(bytes, total, bytes.size - total)
+                    if (read < 0) break
+                    total += read
+                }
+                if (total > MAX_INFO_RESPONSE_BYTES) {
+                    channel.cancel()
+                    return@withTimeout null
+                }
+                val info = WireCodec.decodeInfo(bytes.copyOf(total).toString(Charsets.UTF_8))
+                if (info.port != requestedPort || info.name.length > 256 || info.id.length > 128) return@withTimeout null
+                val fingerprint = info.certificateFingerprint.replace(":", "").uppercase()
+                if (fingerprint.length != 64 || fingerprint.any { it !in '0'..'9' && it !in 'A'..'F' }) return@withTimeout null
+                DiscoveredDesktop(info.name, host, info.port, info.id, fingerprint)
             }
         }.getOrNull()
     }
@@ -75,4 +122,5 @@ class SubnetScanner(
             true
         }
     }.getOrDefault(false)
+
 }

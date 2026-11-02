@@ -18,7 +18,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.saubh.deskbuddy.R
 import com.saubh.deskbuddy.share.TransferProgress
@@ -37,8 +36,6 @@ fun TransferCard(transfer: TransferProgress, onCancel: () -> Unit, modifier: Mod
                 Text(
                     stringResource(if (transfer.outgoing) R.string.share_sending else R.string.share_receiving, transfer.name),
                     style = MaterialTheme.typography.bodyLargeEmphasized,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
                 Text(stringResource(R.string.share_percent, (transfer.fraction * 100).toInt()), style = MaterialTheme.typography.labelLarge)

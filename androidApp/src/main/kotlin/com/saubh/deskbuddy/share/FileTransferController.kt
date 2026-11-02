@@ -12,6 +12,7 @@ import com.saubh.deskbuddy.protocol.Protocol
 import com.saubh.deskbuddy.protocol.Push
 import com.saubh.deskbuddy.session.RemoteSession
 import com.saubh.deskbuddy.transfer.FileChunkCodec
+import com.saubh.deskbuddy.transfer.FileNames
 import com.saubh.deskbuddy.transfer.TransferIds
 import com.saubh.deskbuddy.transfer.TransferTracker
 import com.saubh.deskbuddy.ui.ErrorKind
@@ -79,12 +80,28 @@ class FileTransferController(
     /** Copies share-sheet content into the cache so the URI grant lifetime no longer matters. */
     suspend fun stashForLater(uri: Uri): Uri? = withContext(Dispatchers.IO) {
         runCatching {
-            val name = queryName(uri) ?: "shared"
+            if (querySize(uri)?.let { it > Protocol.MAX_FILE_TRANSFER_BYTES } == true) return@runCatching null
+            val name = FileNames.sanitize(queryName(uri) ?: "shared")
             val dir = File(cacheDir, "pending_share").apply { mkdirs() }
             val file = File(dir, "${now()}_$name")
-            resolver.openInputStream(uri)?.use { input ->
-                file.outputStream().use { output -> input.copyTo(output) }
-            } ?: return@runCatching null
+            try {
+                resolver.openInputStream(uri)?.use { input ->
+                    file.outputStream().use { output ->
+                        val buffer = ByteArray(Protocol.FILE_CHUNK_BYTES)
+                        var copied = 0L
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read <= 0) break
+                            if (copied > Protocol.MAX_FILE_TRANSFER_BYTES - read) throw IOException("Shared file is too large")
+                            output.write(buffer, 0, read)
+                            copied += read
+                        }
+                    }
+                } ?: return@runCatching null
+            } catch (error: Exception) {
+                file.delete()
+                throw error
+            }
             Uri.fromFile(file)
         }.getOrNull()
     }
@@ -92,6 +109,10 @@ class FileTransferController(
     private suspend fun sendNow(uri: Uri) {
         val name = queryName(uri) ?: "file"
         val size = querySize(uri) ?: measure(uri)
+        if (size > Protocol.MAX_FILE_TRANSFER_BYTES) {
+            session.reportError(ErrorKind.TRANSFER_FAILED)
+            return
+        }
         val mime = resolver.getType(uri) ?: "application/octet-stream"
         val id = TransferIds.next()
         if (!session.send(FileOfferCommand(id, name, size, mime))) return
@@ -134,7 +155,10 @@ class FileTransferController(
     }
 
     private fun onOffer(offer: FileOfferCommand) {
-        if (tracker.offer(offer) !is TransferTracker.Result.Accepted) return
+        if (tracker.offer(offer) !is TransferTracker.Result.Accepted) {
+            session.reportError(ErrorKind.TRANSFER_FAILED)
+            return
+        }
         val target = runCatching { store.open(offer.name, offer.mimeType) }.getOrNull()
         if (target == null) {
             tracker.cancel(offer.transferId)
@@ -149,14 +173,19 @@ class FileTransferController(
         val target = targets[chunk.transferId] ?: return
         val bytes = runCatching { FileChunkCodec.decode(chunk.data) }.getOrNull()
         val result = bytes?.let { tracker.chunk(chunk.transferId, chunk.index, it.size) }
-        val written = bytes != null && result is TransferTracker.Result.Accepted &&
-            runCatching { target.stream.write(bytes) }.isSuccess
-        if (!written || result !is TransferTracker.Result.Accepted) {
+        val accepted = result as? TransferTracker.Result.Accepted
+        if (bytes == null || accepted == null) {
             abort(chunk.transferId)
             session.reportError(ErrorKind.TRANSFER_FAILED)
             return
         }
-        val incoming = result.incoming
+        val written = runCatching { target.stream.write(bytes) }.isSuccess
+        if (!written) {
+            abort(chunk.transferId)
+            session.reportError(ErrorKind.TRANSFER_FAILED)
+            return
+        }
+        val incoming = accepted.incoming
         report(TransferProgress(incoming.offer.name, incoming.receivedBytes, incoming.offer.sizeBytes, outgoing = false))
     }
 
@@ -216,6 +245,7 @@ class FileTransferController(
             while (true) {
                 val read = it.read(buffer)
                 if (read <= 0) break
+                if (total > Protocol.MAX_FILE_TRANSFER_BYTES - read) return Protocol.MAX_FILE_TRANSFER_BYTES + 1
                 total += read
             }
             total

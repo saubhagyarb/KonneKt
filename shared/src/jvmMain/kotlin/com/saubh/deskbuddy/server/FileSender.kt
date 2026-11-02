@@ -25,6 +25,7 @@ class FileSender(private val push: suspend (Message) -> Boolean) {
         val id = TransferIds.next()
         val name = file.fileName.toString()
         val size = withContext(Dispatchers.IO) { Files.size(file) }
+        if (size > Protocol.MAX_FILE_TRANSFER_BYTES) return false
         val mime = withContext(Dispatchers.IO) { runCatching { Files.probeContentType(file) }.getOrNull() }
             ?: "application/octet-stream"
         if (!push(Push(FileOfferCommand(id, name, size, mime)))) return false

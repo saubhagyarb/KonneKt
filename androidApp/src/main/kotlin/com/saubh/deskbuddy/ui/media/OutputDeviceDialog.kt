@@ -37,7 +37,7 @@ fun OutputDeviceDialog(devices: List<AudioDevice>, onSelect: (String) -> Unit, o
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(devices) { device ->
+                items(devices, key = { it.id }, contentType = { "output-device" }) { device ->
                     Surface(
                         onClick = {
                             onSelect(device.id)

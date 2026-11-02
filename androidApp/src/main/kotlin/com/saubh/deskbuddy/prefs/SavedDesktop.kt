@@ -16,6 +16,8 @@ data class SavedDesktop(
     val token: String,
     val id: String = "",
     val lastUsedAt: Long = 0L,
+    /** SHA-256 of the desktop TLS certificate, stored only after the user confirms its fingerprint. */
+    val certificateFingerprint: String = "",
 ) {
     /** Same PC, even if its address changed: by id when both sides know it, else by name. */
     fun isSamePc(otherId: String?, otherName: String?): Boolean = when {

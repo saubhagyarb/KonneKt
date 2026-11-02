@@ -24,8 +24,8 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Pkg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Exe)
-            // From ./gradlew :desktopApp:suggestRuntimeModules (Ktor, JNA, StartupRegistration).
-            modules("java.instrument", "java.management", "jdk.unsupported")
+            // From ./gradlew :desktopApp:suggestRuntimeModules (Ktor Netty, JNA, StartupRegistration).
+            modules("java.instrument", "java.management", "jdk.jfr", "jdk.unsupported")
             packageName = "KonneKt"
             packageVersion = "1.0.0"
             // Per-OS files next to the app (read through compose.application.resources.dir): macos/ holds mediaremote-adapter.
@@ -40,8 +40,10 @@ compose.desktop {
                 iconFile.set(project.file("icons/deskbuddy.icns"))
                 bundleID = "com.saubh.konnekt"
                 infoPlist {
-                    // Without this key macOS silently refuses the Apple Events behind now playing, power and open windows.
+                    // Run as a menu-bar app, without a Dock icon. The usage string enables Apple Events.
                     extraKeysRawXml = """
+                        <key>LSUIElement</key>
+                        <true/>
                         <key>NSAppleEventsUsageDescription</key>
                         <string>KonneKt controls music, windows and power on this Mac when you ask from your phone.</string>
                     """.trimIndent()

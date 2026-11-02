@@ -59,7 +59,7 @@ fun PcStatusCard(pcName: String, reconnectAttempt: Int?, onPower: (PowerAction) 
                 IconAvatar(KonnektIcons.Computer, 64.dp, cookieShape(), scheme.primary, scheme.onPrimary)
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.home_connected_to), style = MaterialTheme.typography.labelLarge)
-                    Text(pcName, style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(pcName, style = MaterialTheme.typography.headlineSmallEmphasized, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(
                         if (reconnectAttempt != null) {
                             stringResource(R.string.status_reconnecting, reconnectAttempt)
@@ -215,7 +215,7 @@ fun MiniPlayerCard(media: MediaUiState, onOpen: () -> Unit, onPlayPause: () -> U
 fun ShortcutStrip(shortcuts: List<DesktopApp>, icons: Map<String, ByteArray>, onLaunch: (String) -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
     LazyRow(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(shortcuts, key = { it.id }) { app ->
+        items(shortcuts, key = { it.id }, contentType = { "shortcut" }) { app ->
             val cd = stringResource(R.string.cd_launch, app.name)
             Surface(
                 onClick = { onLaunch(app.id) },

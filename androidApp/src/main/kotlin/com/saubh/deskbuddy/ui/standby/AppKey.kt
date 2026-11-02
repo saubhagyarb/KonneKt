@@ -71,7 +71,7 @@ fun AppGrid(
             horizontalArrangement = Arrangement.spacedBy(KEY_GAP),
             verticalArrangement = Arrangement.spacedBy(KEY_GAP),
         ) {
-            items(shortcuts, key = { it.id }) { app ->
+            items(shortcuts, key = { it.id }, contentType = { "shortcut" }) { app ->
                 AppKey(app, icons[app.id], app.id in running, compact, onClick = { onActivate(app.id) }, Modifier.animateItem())
             }
         }

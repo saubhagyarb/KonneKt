@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -37,7 +38,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.saubh.deskbuddy.R
 import com.saubh.deskbuddy.apps.AppsUiState
@@ -65,7 +65,7 @@ fun LaunchPane(
     onRefresh: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    val filtered = state.apps.filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
+    val filtered = remember(state.apps, query) { state.apps.filter { query.isBlank() || it.name.contains(query, ignoreCase = true) } }
     val fullSpan: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
     val refreshCd = stringResource(R.string.apps_refresh)
 
@@ -76,7 +76,7 @@ fun LaunchPane(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(span = fullSpan) {
+        item(span = fullSpan, contentType = "section-header") {
             SectionHeader(stringResource(R.string.apps_shortcuts_title), supporting = stringResource(R.string.apps_shortcuts_hint)) {
                 FilledTonalIconButton(
                     onClick = onRefresh,
@@ -86,13 +86,13 @@ fun LaunchPane(
             }
         }
         if (state.shortcuts.isEmpty()) {
-            item(span = fullSpan) {
+            item(span = fullSpan, contentType = "empty-state") {
                 InfoCard(stringResource(if (state.loaded) R.string.apps_no_shortcuts else R.string.apps_loading), loading = !state.loaded, icon = KonnektIcons.StarOutline)
             }
         } else {
-            items(state.shortcuts, key = { "s:" + it.id }) { app -> ShortcutTile(app, state.icons[app.id]) { onLaunch(app.id) } }
+            items(state.shortcuts, key = { "s:" + it.id }, contentType = { "shortcut-tile" }) { app -> ShortcutTile(app, state.icons[app.id]) { onLaunch(app.id) } }
         }
-        item(span = fullSpan) {
+        item(span = fullSpan, contentType = "search-header") {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 12.dp)) {
                 SectionHeader(stringResource(R.string.apps_all_title))
                 OutlinedTextField(
@@ -107,9 +107,9 @@ fun LaunchPane(
             }
         }
         if (filtered.isEmpty() && state.loaded) {
-            item(span = fullSpan) { InfoCard(stringResource(R.string.apps_no_match), icon = KonnektIcons.Search) }
+            item(span = fullSpan, contentType = "empty-state") { InfoCard(stringResource(R.string.apps_no_match), icon = KonnektIcons.Search) }
         } else {
-            items(filtered, key = { "a:" + it.id }, span = { GridItemSpan(minOf(ROW_TILE_SPAN, maxLineSpan)) }) { app ->
+            items(filtered, key = { "a:" + it.id }, contentType = { "app-row" }, span = { GridItemSpan(minOf(ROW_TILE_SPAN, maxLineSpan)) }) { app ->
                 val pinned = state.isShortcut(app.id)
                 AppRow(app, pinned, onLaunch = { onLaunch(app.id) }, onTogglePin = { onSetPinned(app.id, !pinned) })
             }
@@ -125,7 +125,7 @@ private fun ShortcutTile(app: DesktopApp, icon: ByteArray?, onLaunch: () -> Unit
         onClick = onLaunch,
         shape = MaterialTheme.shapes.largeIncreased,
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerHigh),
-        modifier = Modifier.height(116.dp).semantics { contentDescription = cd },
+        modifier = Modifier.heightIn(min = 116.dp).semantics { contentDescription = cd },
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(10.dp),
@@ -133,7 +133,7 @@ private fun ShortcutTile(app: DesktopApp, icon: ByteArray?, onLaunch: () -> Unit
             verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         ) {
             AppIcon(app.name, icon, 56.dp, cookieShape(), scheme.primaryContainer, scheme.onPrimaryContainer)
-            Text(app.name, style = MaterialTheme.typography.labelLargeEmphasized, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+            Text(app.name, style = MaterialTheme.typography.labelLargeEmphasized, textAlign = TextAlign.Center)
         }
     }
 }
@@ -155,7 +155,7 @@ private fun AppRow(app: DesktopApp, pinned: Boolean, onLaunch: () -> Unit, onTog
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             LetterAvatar(app.name, 40.dp, CircleShape, scheme.secondaryContainer, scheme.onSecondaryContainer)
-            Text(app.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(app.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             IconToggleButton(
                 checked = pinned,
                 onCheckedChange = { onTogglePin() },

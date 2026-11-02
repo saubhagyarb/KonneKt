@@ -16,8 +16,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -58,6 +64,7 @@ fun StatusPanel(
     hostName: String,
     ipAddress: String,
     port: Int,
+    certificateFingerprint: String,
     mediaHelperAvailable: Boolean,
     keyboardLabel: String,
     startup: StartupSetting?,
@@ -78,15 +85,21 @@ fun StatusPanel(
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            when (state) {
-                is ServerState.Waiting -> WaitingHero()
-                is ServerState.Pairing -> PairingHero(state.pin)
-                is ServerState.Connected -> ConnectedHero(state.devices, onUnpairAll)
+            AnimatedContent(
+                targetState = state,
+                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                label = "connection state",
+            ) { displayedState ->
+                when (displayedState) {
+                    is ServerState.Waiting -> WaitingHero()
+                    is ServerState.Pairing -> PairingHero(displayedState.pin)
+                    is ServerState.Connected -> ConnectedHero(displayedState.devices, onUnpairAll)
+                }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 AssistChip(
                     onClick = {},
-                    label = { Text(hostName) },
+                    label = { Text(hostName, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                     leadingIcon = { Icon(KonnektIcons.Computer, contentDescription = null, modifier = Modifier.size(18.dp)) },
                     shape = CircleShape,
                 )
@@ -108,6 +121,27 @@ fun StatusPanel(
                     leadingIcon = { Icon(KonnektIcons.Keyboard, contentDescription = null, modifier = Modifier.size(18.dp)) },
                     shape = CircleShape,
                 )
+            }
+            Card(
+                shape = MaterialTheme.shapes.large,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Pairing security", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Compare this SHA-256 certificate fingerprint with the one shown on your phone before approving the first connection.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    SelectionContainer {
+                        Text(
+                            certificateFingerprint,
+                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
             }
             PermissionsCard(
                 permissions = permissions,

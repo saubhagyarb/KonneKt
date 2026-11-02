@@ -36,7 +36,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.saubh.deskbuddy.R
@@ -100,8 +99,6 @@ fun NowPlayingCard(state: MediaUiState, modifier: Modifier = Modifier, scrollabl
                 np?.title ?: stringResource(R.string.media_nothing_playing),
                 style = MaterialTheme.typography.titleLargeEmphasized,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
             val subtitle = listOfNotNull(np?.artist, np?.album).joinToString(" • ")
             if (subtitle.isNotEmpty()) {
@@ -110,8 +107,6 @@ fun NowPlayingCard(state: MediaUiState, modifier: Modifier = Modifier, scrollabl
                     style = MaterialTheme.typography.bodyMedium,
                     color = scheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
                 )
             } else if (state.status == PlaybackStatus.NONE) {
                 Text(

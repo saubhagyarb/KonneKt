@@ -91,6 +91,9 @@ class RemoteSession(
     private var current: SavedDesktop? = null
 
     @Volatile
+    private var pendingCertificateTrust: SavedDesktop? = null
+
+    @Volatile
     private var endSession = false
 
     /** Set by an explicit Disconnect so auto-connect does not immediately undo it. */
@@ -163,8 +166,45 @@ class RemoteSession(
         sessionJob?.cancel()
         endSession = false
         autoConnectPaused = false
-        current = target
-        sessionJob = scope.launch { sessionLoop(target, quiet) }
+        pendingCertificateTrust = null
+        current = null
+        sessionJob = scope.launch {
+            client.disconnect()
+            val trustedFingerprint = normalizeFingerprint(target.certificateFingerprint)
+            if (trustedFingerprint.length == 64 && trustedFingerprint.all(::isHexDigit)) {
+                val trustedTarget = target.copy(certificateFingerprint = trustedFingerprint)
+                current = trustedTarget
+                sessionLoop(trustedTarget, quiet)
+                return@launch
+            }
+
+            _uiState.value = ConnectionUiState.Connecting(target.name)
+            val info = scanner.fetchInfo(target.host, target.port)
+            if (info == null) {
+                if (!quiet) emitError(ErrorKind.CONNECTION_FAILED)
+                goIdle()
+                return@launch
+            }
+            if (target.id.isNotEmpty() && info.id.isNotEmpty() && target.id != info.id) {
+                emitError(ErrorKind.CERTIFICATE_MISMATCH)
+                goIdle()
+                return@launch
+            }
+            val candidate = target.copy(
+                name = info.name.ifBlank { target.name },
+                id = info.id.ifBlank { target.id },
+                certificateFingerprint = info.certificateFingerprint,
+            )
+            pendingCertificateTrust = candidate
+            _uiState.value = ConnectionUiState.VerifyingCertificate(candidate.name, candidate.certificateFingerprint)
+        }
+    }
+
+    /** Continues only after the user compares this fingerprint with the value on the desktop. */
+    fun trustCertificate() {
+        val target = pendingCertificateTrust ?: return
+        pendingCertificateTrust = null
+        connect(target, quiet = false)
     }
 
     fun forget(desktop: SavedDesktop) {
@@ -210,6 +250,7 @@ class RemoteSession(
     /** User-initiated: also pauses auto-connect until the user connects again. */
     fun disconnect() {
         autoConnectPaused = true
+        pendingCertificateTrust = null
         sessionJob?.cancel()
         sessionJob = null
         scope.launch { client.disconnect() }
@@ -249,7 +290,7 @@ class RemoteSession(
 
     private suspend fun connectOnce(target: SavedDesktop): SessionOutcome {
         val incomingFrames = try {
-            client.connect(target.host, target.port)
+            client.connect(target.host, target.port, target.certificateFingerprint)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -279,6 +320,10 @@ class RemoteSession(
             _uiState.value = ConnectionUiState.Connected(target.name)
         }
     }
+
+    private fun normalizeFingerprint(value: String): String = value.filter(Char::isLetterOrDigit).uppercase()
+
+    private fun isHexDigit(char: Char): Boolean = char in '0'..'9' || char in 'A'..'F'
 
     /** Records the address that just worked and bumps the PC to the front of the auto-connect order. */
     private suspend fun remember(desktop: SavedDesktop) {

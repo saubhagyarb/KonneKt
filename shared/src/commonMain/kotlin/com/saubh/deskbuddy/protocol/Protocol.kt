@@ -11,6 +11,9 @@ object Protocol {
 
     /** Raw bytes per file chunk before base64 encoding. */
     const val FILE_CHUNK_BYTES = 32 * 1024
+    const val MAX_FILE_TRANSFER_BYTES = 1L shl 30
+    const val MAX_CONCURRENT_FILE_TRANSFERS = 2
+    const val MAX_ACTIVE_FILE_TRANSFER_BYTES = 1_610_612_736L // 1.5 GiB
 
     /** How often the desktop polls its clipboard for changes to push to the phone. */
     const val CLIPBOARD_POLL_MILLIS = 1_000L

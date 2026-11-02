@@ -70,7 +70,7 @@ kotlin {
             implementation(libs.jna)
             implementation(libs.jna.platform)
             implementation(libs.ktor.serverCore)
-            implementation(libs.ktor.serverCio)
+            implementation(libs.ktor.serverNetty)
             implementation(libs.ktor.serverWebsockets)
             implementation(libs.jmdns)
         }

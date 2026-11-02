@@ -53,6 +53,8 @@ fun RunningAppCard(
 ) {
     val scheme = MaterialTheme.colorScheme
     val tabCount = app.windows.sumOf { it.tabs.size }
+    var showAllWindows by rememberSaveable(app.id) { mutableStateOf(false) }
+    val visibleWindows = if (showAllWindows) app.windows else app.windows.take(MAX_VISIBLE_WINDOWS)
     Card(
         shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainerLow),
@@ -65,7 +67,7 @@ fun RunningAppCard(
         ) {
             LetterAvatar(app.name, 40.dp, cookieShape(), scheme.secondaryContainer, scheme.onSecondaryContainer)
             Column(Modifier.weight(1f)) {
-                Text(app.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(app.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     if (tabCount > 0) {
                         pluralStringResource(R.plurals.open_tab_count, tabCount, tabCount)
@@ -79,8 +81,16 @@ fun RunningAppCard(
             TextButton(onClick = onCloseApp) { Text(stringResource(R.string.close_app), color = scheme.error) }
         }
         Column(Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            app.windows.forEach { window ->
+            visibleWindows.forEach { window ->
                 WindowBlock(window, startExpanded = app.windows.size == 1, onCloseWindow, onCloseTab)
+            }
+            if (app.windows.size > MAX_VISIBLE_WINDOWS) {
+                TextButton(onClick = { showAllWindows = !showAllWindows }) {
+                    Text(
+                        if (showAllWindows) stringResource(R.string.open_show_fewer)
+                        else pluralStringResource(R.plurals.open_show_all_windows, app.windows.size, app.windows.size),
+                    )
+                }
             }
         }
     }
@@ -95,6 +105,8 @@ private fun WindowBlock(
 ) {
     val scheme = MaterialTheme.colorScheme
     var expanded by rememberSaveable(window.id) { mutableStateOf(startExpanded) }
+    var showAllTabs by rememberSaveable(window.id) { mutableStateOf(false) }
+    val visibleTabs = if (showAllTabs) window.tabs else window.tabs.take(MAX_VISIBLE_TABS)
     Surface(shape = MaterialTheme.shapes.large, color = scheme.surfaceContainer) {
         Column {
             CloseRow(
@@ -116,7 +128,7 @@ private fun WindowBlock(
             AnimatedVisibility(visible = expanded && window.tabs.isNotEmpty()) {
                 Column(Modifier.padding(start = 24.dp, bottom = 4.dp)) {
                     HorizontalDivider(color = scheme.outlineVariant)
-                    window.tabs.forEach { tab ->
+                    visibleTabs.forEach { tab ->
                         CloseRow(
                             icon = KonnektIcons.Tab,
                             title = tab.title,
@@ -124,11 +136,22 @@ private fun WindowBlock(
                             onClose = { onCloseTab(window, tab) },
                         )
                     }
+                    if (window.tabs.size > MAX_VISIBLE_TABS) {
+                        TextButton(onClick = { showAllTabs = !showAllTabs }) {
+                            Text(
+                                if (showAllTabs) stringResource(R.string.open_show_fewer)
+                                else pluralStringResource(R.plurals.open_show_all_tabs, window.tabs.size, window.tabs.size),
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
+
+private const val MAX_VISIBLE_WINDOWS = 12
+private const val MAX_VISIBLE_TABS = 8
 
 @Composable
 private fun CloseRow(
@@ -145,7 +168,7 @@ private fun CloseRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Icon(icon, contentDescription = null, tint = scheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-        Text(title, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(title, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         trailing?.invoke()
         IconButton(onClick = onClose, modifier = Modifier.semantics { contentDescription = closeDescription }) {
             Icon(KonnektIcons.Close, contentDescription = null, tint = scheme.error)

@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 
 /**
  * KonneKt M3 Expressive theme shared by the phone and desktop apps: brand color scheme,
- * spring-based expressive motion, the extended shape scale and emphasized type styles.
+ * restrained system motion, the extended shape scale and emphasized type styles.
  */
 @Composable
 fun KonnektTheme(
@@ -21,7 +21,7 @@ fun KonnektTheme(
 ) {
     MaterialExpressiveTheme(
         colorScheme = if (darkTheme) KonnektColors.Dark else KonnektColors.Light,
-        motionScheme = MotionScheme.expressive(),
+        motionScheme = MotionScheme.standard(),
         shapes = Shapes(),
         typography = Typography(),
         content = content,

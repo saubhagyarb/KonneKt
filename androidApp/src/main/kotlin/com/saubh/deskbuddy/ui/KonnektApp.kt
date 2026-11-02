@@ -1,6 +1,11 @@
 package com.saubh.deskbuddy.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -11,11 +16,15 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.saubh.deskbuddy.R
 import com.saubh.deskbuddy.ui.components.PowerCountdownDialog
+import com.saubh.deskbuddy.share.PendingShare
 import com.saubh.deskbuddy.ui.connect.DevicesRoute
 import com.saubh.deskbuddy.ui.shell.ConnectedShell
 import com.saubh.deskbuddy.ui.standby.StandbyRoute
@@ -29,6 +38,7 @@ fun KonnektApp(viewModel: ConnectionViewModel, onStandbyVisibleChange: (Boolean)
     val pcName by viewModel.pcName.collectAsStateWithLifecycle()
     val autoStandby by viewModel.autoStandby.collectAsStateWithLifecycle()
     val powerCountdown by viewModel.powerCountdown.collectAsStateWithLifecycle()
+    val shareAwaitingConsent by viewModel.shareAwaitingConsent.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val resources = LocalResources.current
     var userStandby by rememberSaveable { mutableStateOf(false) }
@@ -59,6 +69,13 @@ fun KonnektApp(viewModel: ConnectionViewModel, onStandbyVisibleChange: (Boolean)
         KonnektTheme(darkTheme = standby || isSystemInDarkTheme()) {
             PowerCountdownDialog(powerCountdown, viewModel::cancelPowerCountdown)
         }
+        shareAwaitingConsent?.let { pending ->
+            IncomingShareDialog(
+                pending = pending,
+                onConfirm = viewModel::confirmExternalShare,
+                onDismiss = viewModel::dismissExternalShare,
+            )
+        }
         if (standby) {
             StandbyRoute(onExit = {
                 userStandby = false
@@ -83,8 +100,50 @@ fun KonnektApp(viewModel: ConnectionViewModel, onStandbyVisibleChange: (Boolean)
     }
 }
 
+@Composable
+private fun IncomingShareDialog(pending: PendingShare, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val title = when (pending) {
+        is PendingShare.Text -> "Send shared text?"
+        is PendingShare.File -> "Send shared file?"
+    }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { androidx.compose.material3.Text(title) },
+        text = {
+            Column(
+                Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                when (pending) {
+                    is PendingShare.Text -> {
+                        val preview = pending.text.replace(Regex("\\s+"), " ").take(180)
+                        androidx.compose.material3.Text(
+                            preview + if (pending.text.length > 180) "…" else "",
+                            maxLines = 5,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    is PendingShare.File -> androidx.compose.material3.Text(
+                        pending.displayName ?: "A file from another app is ready to send.",
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                androidx.compose.material3.Text(
+                    "It will be sent to your connected PC, or queued until a PC connects.",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = { androidx.compose.material3.Button(onClick = onConfirm) { androidx.compose.material3.Text("Send") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { androidx.compose.material3.Text("Cancel") } },
+    )
+}
+
 fun ErrorKind.messageRes(): Int = when (this) {
     ErrorKind.CONNECTION_FAILED -> R.string.err_connection_failed
+    ErrorKind.CERTIFICATE_MISMATCH -> R.string.err_certificate_mismatch
     ErrorKind.CONNECTION_LOST -> R.string.err_connection_lost
     ErrorKind.PAIRING_REJECTED -> R.string.err_pairing_rejected
     ErrorKind.DESKTOP_BUSY -> R.string.err_desktop_busy

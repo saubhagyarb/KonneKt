@@ -6,6 +6,7 @@ sealed interface ConnectionUiState {
     data object Idle : ConnectionUiState
     data class Discovering(val desktops: List<DiscoveredDesktop>) : ConnectionUiState
     data class Connecting(val target: String) : ConnectionUiState
+    data class VerifyingCertificate(val target: String, val fingerprint: String) : ConnectionUiState
     data class Pairing(val attemptsLeft: Int) : ConnectionUiState
     data class Connected(val desktopName: String) : ConnectionUiState
     data class Reconnecting(val attempt: Int) : ConnectionUiState
@@ -13,6 +14,7 @@ sealed interface ConnectionUiState {
 
 enum class ErrorKind {
     CONNECTION_FAILED,
+    CERTIFICATE_MISMATCH,
     CONNECTION_LOST,
     PAIRING_REJECTED,
     DESKTOP_BUSY,

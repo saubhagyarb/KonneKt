@@ -95,7 +95,7 @@ fun NearbyPcCard(desktop: DiscoveredDesktop, onClick: () -> Unit, modifier: Modi
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             IconAvatar(KonnektIcons.Wifi, 44.dp, CircleShape, scheme.secondaryContainer, scheme.onSecondaryContainer)
             Column(Modifier.weight(1f)) {
-                Text(desktop.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(desktop.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text("${desktop.host}:${desktop.port}", style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant)
             }
             Text(stringResource(R.string.devices_pair), style = MaterialTheme.typography.labelLarge, color = scheme.primary)

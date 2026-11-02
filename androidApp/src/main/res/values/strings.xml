@@ -204,6 +204,7 @@
     <string name="cd_close_tab">Close tab %1$s</string>
     <string name="cd_show_tabs">Show tabs</string>
     <string name="cd_hide_tabs">Hide tabs</string>
+    <string name="open_show_fewer">Show fewer</string>
     <plurals name="open_window_count">
         <item quantity="one">%1$d window</item>
         <item quantity="other">%1$d windows</item>
@@ -211,6 +212,14 @@
     <plurals name="open_tab_count">
         <item quantity="one">%1$d tab</item>
         <item quantity="other">%1$d tabs</item>
+    </plurals>
+    <plurals name="open_show_all_tabs">
+        <item quantity="one">Show all %1$d tab</item>
+        <item quantity="other">Show all %1$d tabs</item>
+    </plurals>
+    <plurals name="open_show_all_windows">
+        <item quantity="one">Show all %1$d window</item>
+        <item quantity="other">Show all %1$d windows</item>
     </plurals>
     <string name="apps_shortcuts_title">Shortcuts</string>
     <string name="apps_shortcuts_hint">One tap to launch on the PC</string>
@@ -242,6 +251,9 @@
     <string name="share_inbox_hint">Newest first</string>
     <string name="share_inbox_empty">Nothing received yet. Text and files sent from your PC show up here.</string>
     <string name="share_copy">Copy</string>
+    <string name="share_received_text_title">Text from your PC</string>
+    <string name="share_show_more">Show more</string>
+    <string name="share_show_less">Show less</string>
     <string name="share_saved_to">Saved to %1$s</string>
     <string name="share_clear_inbox">Clear</string>
     <string name="share_clear_title">Clear received items?</string>
@@ -267,6 +279,7 @@
 
     <!-- Errors -->
     <string name="err_connection_failed">Could not connect. Check that KonneKt is running on your PC.</string>
+    <string name="err_certificate_mismatch">This address resolves to a different PC identity. Check the network address before reconnecting.</string>
     <string name="err_connection_lost">Connection lost.</string>
     <string name="err_pairing_rejected">Pairing rejected by the PC.</string>
     <string name="err_desktop_busy">Another device is already connected to this PC.</string>

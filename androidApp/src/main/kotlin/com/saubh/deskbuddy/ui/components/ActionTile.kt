@@ -46,7 +46,7 @@ fun ActionTile(
             verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
         ) {
             Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(28.dp))
-            Text(label, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center, maxLines = 2)
+            Text(label, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center)
         }
     }
 }

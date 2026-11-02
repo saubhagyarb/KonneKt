@@ -1,6 +1,7 @@
 package com.saubh.deskbuddy.transfer
 
 import com.saubh.deskbuddy.protocol.FileOfferCommand
+import com.saubh.deskbuddy.protocol.Protocol
 
 /**
  * Pure bookkeeping for incoming file transfers: enforces one offer per id,
@@ -16,7 +17,7 @@ class TransferTracker {
         data class Rejected(val reason: Reason) : Result()
     }
 
-    enum class Reason { UNKNOWN_TRANSFER, DUPLICATE_TRANSFER, OUT_OF_ORDER, SIZE_MISMATCH, TOO_LARGE }
+    enum class Reason { UNKNOWN_TRANSFER, DUPLICATE_TRANSFER, OUT_OF_ORDER, SIZE_MISMATCH, TOO_LARGE, TOO_MANY_TRANSFERS }
 
     private val active = LinkedHashMap<String, Incoming>()
 
@@ -27,6 +28,10 @@ class TransferTracker {
     fun offer(offer: FileOfferCommand): Result {
         if (offer.transferId in active) return Result.Rejected(Reason.DUPLICATE_TRANSFER)
         if (offer.sizeBytes < 0) return Result.Rejected(Reason.SIZE_MISMATCH)
+        if (offer.sizeBytes > Protocol.MAX_FILE_TRANSFER_BYTES) return Result.Rejected(Reason.TOO_LARGE)
+        if (active.size >= Protocol.MAX_CONCURRENT_FILE_TRANSFERS) return Result.Rejected(Reason.TOO_MANY_TRANSFERS)
+        val reserved = active.values.sumOf { it.offer.sizeBytes }
+        if (offer.sizeBytes > Protocol.MAX_ACTIVE_FILE_TRANSFER_BYTES - reserved) return Result.Rejected(Reason.TOO_LARGE)
         val incoming = Incoming(offer, nextIndex = 0, receivedBytes = 0)
         active[offer.transferId] = incoming
         return Result.Accepted(incoming)

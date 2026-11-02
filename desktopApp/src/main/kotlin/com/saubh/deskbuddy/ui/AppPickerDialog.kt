@@ -7,10 +7,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -54,7 +54,7 @@ fun AppPickerDialog(
         icon = { Icon(KonnektIcons.Apps, contentDescription = null, tint = scheme.primary) },
         title = { Text("Installed apps", style = MaterialTheme.typography.headlineSmallEmphasized) },
         text = {
-            Column(Modifier.width(480.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.widthIn(max = 480.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
@@ -72,8 +72,8 @@ fun AppPickerDialog(
                 } else if (filtered.isEmpty()) {
                     Text("No apps match your search.", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
                 } else {
-                    LazyColumn(Modifier.height(400.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        items(filtered, key = { it.id }) { app ->
+                    LazyColumn(Modifier.heightIn(max = 320.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        items(filtered, key = { it.id }, contentType = { "installed-app" }) { app ->
                             Row(
                                 Modifier
                                     .fillMaxWidth()

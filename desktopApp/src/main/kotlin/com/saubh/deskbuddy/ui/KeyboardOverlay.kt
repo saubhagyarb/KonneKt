@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -124,7 +125,13 @@ private fun OverlayBar(state: TypingState, echo: String, hotkeyLabel: String?, f
             Icon(KonnektIcons.Keyboard, contentDescription = null)
             Text(message, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (state is TypingState.Active && echo.isNotEmpty()) {
-                Text(echo, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                Text(
+                    echo,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 240.dp),
+                )
             }
         }
     }

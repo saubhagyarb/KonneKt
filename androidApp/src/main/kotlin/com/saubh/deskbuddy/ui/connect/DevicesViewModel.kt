@@ -26,6 +26,7 @@ class DevicesViewModel(
                 saved = ordered,
                 nearby = discovered.filterNot { d -> ordered.any { it.host == d.host || it.isSamePc(d.id, d.name) } },
                 connectingTo = (state as? ConnectionUiState.Connecting)?.target,
+                certificateToVerify = state as? ConnectionUiState.VerifyingCertificate,
                 pairingAttemptsLeft = (state as? ConnectionUiState.Pairing)?.attemptsLeft,
                 searching = state is ConnectionUiState.Idle || state is ConnectionUiState.Discovering,
             )
@@ -53,6 +54,8 @@ class DevicesViewModel(
     fun forget(desktop: SavedDesktop) = session.forget(desktop)
 
     fun submitPin(pin: String) = session.submitPin(pin)
+
+    fun trustCertificate() = session.trustCertificate()
 
     fun cancel() = session.disconnect()
 

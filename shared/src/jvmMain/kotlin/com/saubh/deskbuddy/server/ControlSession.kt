@@ -51,6 +51,9 @@ interface SessionListener {
     fun onPairingStarted(pin: String)
     fun onPairingEnded()
     fun onAuthenticated(deviceName: String, token: String)
+    fun canStartPairing(): Boolean = true
+    fun onPairingFailed() = Unit
+    fun onPairingSucceeded() = Unit
 }
 
 class ControlSession(
@@ -87,6 +90,9 @@ class ControlSession(
     }
 
     private fun startPairing(request: PairRequest): SessionReply {
+        if (pairing != null || !listener.canStartPairing()) {
+            return SessionReply(Ack(ok = false, error = ErrorCode.BUSY))
+        }
         pendingDeviceName = request.deviceName
         val session = PairingSession(pin = newPin(), createdAtMillis = now())
         pairing = session
@@ -99,14 +105,19 @@ class ControlSession(
             ?: return SessionReply(Ack(ok = false, error = ErrorCode.INTERNAL), closeConnection = true)
         return when (val result = session.attempt(attempt.pin, now())) {
             is PairingResult.Success -> {
+                listener.onPairingSucceeded()
                 val token = newToken()
                 store.add(PairedDevice(pendingDeviceName, token))
                 endPairing()
                 listener.onAuthenticated(pendingDeviceName, token)
                 SessionReply(PairSuccess(token, desktopName, desktopId))
             }
-            is PairingResult.WrongPin -> SessionReply(PairFailure(result.attemptsLeft))
+            is PairingResult.WrongPin -> {
+                listener.onPairingFailed()
+                SessionReply(PairFailure(result.attemptsLeft))
+            }
             is PairingResult.LockedOut -> {
+                listener.onPairingFailed()
                 endPairing()
                 SessionReply(PairFailure(attemptsLeft = 0), closeConnection = true)
             }

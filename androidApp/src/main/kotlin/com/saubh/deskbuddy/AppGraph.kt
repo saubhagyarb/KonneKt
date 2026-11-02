@@ -38,11 +38,13 @@ class AppGraph(context: Context) {
 
     val standbyPrefs = StandbyPrefs(app)
 
+    private val scanner = SubnetScanner(app)
+
     val session = RemoteSession(
         scope = scope,
         prefs = prefs,
-        discovery = DesktopDiscovery(app),
-        scanner = SubnetScanner(app),
+        discovery = DesktopDiscovery(app, scanner),
+        scanner = scanner,
         deviceName = Build.MODEL,
     )
 

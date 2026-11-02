@@ -64,6 +64,7 @@ fun DevicesRoute(
         onForget = viewModel::forget,
         onConnectManual = viewModel::connectManual,
         onSubmitPin = viewModel::submitPin,
+        onTrustCertificate = viewModel::trustCertificate,
         onCancel = viewModel::cancel,
     )
 }
@@ -78,6 +79,7 @@ fun DevicesScreen(
     onForget: (SavedDesktop) -> Unit,
     onConnectManual: (String) -> Unit,
     onSubmitPin: (String) -> Unit,
+    onTrustCertificate: () -> Unit,
     onCancel: () -> Unit,
 ) {
     var forgetting by remember { mutableStateOf<SavedDesktop?>(null) }
@@ -108,25 +110,25 @@ fun DevicesScreen(
         ) {
             val column = Modifier.widthIn(max = ContentMaxWidth).fillMaxWidth()
             state.connectingTo?.let { target ->
-                item(key = "connecting") { ConnectingBanner(target, onCancel, column) }
+                item(key = "connecting", contentType = "connecting-banner") { ConnectingBanner(target, onCancel, column) }
             }
             if (state.saved.isEmpty()) {
-                item(key = "start") { GetStartedCard(column) }
+                item(key = "start", contentType = "get-started") { GetStartedCard(column) }
             } else {
-                item(key = "saved-header") {
+                item(key = "saved-header", contentType = "section-header") {
                     SectionHeader(stringResource(R.string.devices_your_pcs), column.padding(top = 8.dp), stringResource(R.string.devices_your_pcs_hint))
                 }
-                items(state.saved, key = { "s:" + it.host + it.token }) { pc ->
-                    SavedPcCard(pc, onConnect = { onReconnect(pc) }, onForget = { forgetting = pc }, modifier = column)
+                items(state.saved, key = { "s:" + it.host + it.token }, contentType = { "saved-pc" }) { pc ->
+                    SavedPcCard(pc, onConnect = { onReconnect(pc) }, onForget = { forgetting = pc }, modifier = column.animateItem())
                 }
             }
-            item(key = "nearby-header") {
+            item(key = "nearby-header", contentType = "section-header") {
                 SectionHeader(stringResource(R.string.devices_nearby), column.padding(top = 8.dp)) {
                     if (state.searching) LoadingIndicator(Modifier.size(32.dp))
                 }
             }
             if (state.nearby.isEmpty()) {
-                item(key = "nearby-empty") {
+                item(key = "nearby-empty", contentType = "empty-state") {
                     InfoCard(
                         text = stringResource(R.string.devices_searching_hint),
                         title = stringResource(R.string.devices_searching),
@@ -135,11 +137,11 @@ fun DevicesScreen(
                     )
                 }
             } else {
-                items(state.nearby, key = { "n:" + it.host }) { desktop ->
-                    NearbyPcCard(desktop, onClick = { onConnect(desktop) }, modifier = column)
+                items(state.nearby, key = { "n:" + it.host }, contentType = { "nearby-pc" }) { desktop ->
+                    NearbyPcCard(desktop, onClick = { onConnect(desktop) }, modifier = column.animateItem())
                 }
             }
-            item(key = "manual") {
+            item(key = "manual", contentType = "manual-connect") {
                 MediumOutlinedButton(
                     text = stringResource(R.string.devices_enter_ip),
                     onClick = { showManual = true },
@@ -161,6 +163,14 @@ fun DevicesScreen(
     }
     state.pairingAttemptsLeft?.let { attempts ->
         PinDialog(attemptsLeft = attempts, onSubmit = onSubmitPin, onDismiss = onCancel)
+    }
+    state.certificateToVerify?.let { verification ->
+        CertificateTrustDialog(
+            desktopName = verification.target,
+            fingerprint = verification.fingerprint,
+            onTrust = onTrustCertificate,
+            onCancel = onCancel,
+        )
     }
     forgetting?.let { pc ->
         ForgetPcDialog(pc.name, onConfirm = { onForget(pc); forgetting = null }, onDismiss = { forgetting = null })

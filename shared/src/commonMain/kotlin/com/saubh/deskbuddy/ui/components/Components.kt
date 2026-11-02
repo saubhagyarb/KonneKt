@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
@@ -94,7 +94,7 @@ fun MediumButton(
     Button(
         onClick = onClick,
         shapes = ButtonDefaults.shapes(),
-        modifier = modifier.height(ButtonDefaults.MediumContainerHeight),
+        modifier = modifier.heightIn(min = ButtonDefaults.MediumContainerHeight),
         enabled = enabled,
         contentPadding = ButtonDefaults.MediumContentPadding,
     ) {
@@ -113,7 +113,7 @@ fun MediumTonalButton(
     FilledTonalButton(
         onClick = onClick,
         shapes = ButtonDefaults.shapes(),
-        modifier = modifier.height(ButtonDefaults.MediumContainerHeight),
+        modifier = modifier.heightIn(min = ButtonDefaults.MediumContainerHeight),
         enabled = enabled,
         contentPadding = ButtonDefaults.MediumContentPadding,
     ) {
@@ -132,7 +132,7 @@ fun MediumOutlinedButton(
     OutlinedButton(
         onClick = onClick,
         shapes = ButtonDefaults.shapes(),
-        modifier = modifier.height(ButtonDefaults.MediumContainerHeight),
+        modifier = modifier.heightIn(min = ButtonDefaults.MediumContainerHeight),
         enabled = enabled,
         contentPadding = ButtonDefaults.MediumContentPadding,
     ) {

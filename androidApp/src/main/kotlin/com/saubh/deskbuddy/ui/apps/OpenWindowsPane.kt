@@ -70,7 +70,7 @@ fun OpenWindowsPane(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        item(key = "header") {
+        item(key = "header", contentType = "section-header") {
             SectionHeader(
                 text = stringResource(R.string.open_title),
                 supporting = updated?.let { stringResource(R.string.open_updated_at, it) } ?: stringResource(R.string.open_subtitle),
@@ -88,7 +88,7 @@ fun OpenWindowsPane(
             }
         }
         when {
-            state.apps.isNotEmpty() -> items(state.apps, key = { it.id }) { app ->
+            state.apps.isNotEmpty() -> items(state.apps, key = { it.id }, contentType = { "running-app" }) { app ->
                 RunningAppCard(
                     app = app,
                     onCloseApp = { pending = CloseRequest.App(app) },
@@ -97,13 +97,13 @@ fun OpenWindowsPane(
                     modifier = column.animateItem(),
                 )
             }
-            !state.loaded && state.loading -> item(key = "loading") {
+            !state.loaded && state.loading -> item(key = "loading", contentType = "empty-state") {
                 InfoCard(stringResource(R.string.open_loading), column, loading = true)
             }
-            state.loaded -> item(key = "empty") {
+            state.loaded -> item(key = "empty", contentType = "empty-state") {
                 InfoCard(stringResource(R.string.open_empty), column, icon = KonnektIcons.CheckCircle)
             }
-            else -> item(key = "idle") {
+            else -> item(key = "idle", contentType = "empty-state") {
                 InfoCard(stringResource(R.string.open_idle), column, icon = KonnektIcons.Info)
             }
         }

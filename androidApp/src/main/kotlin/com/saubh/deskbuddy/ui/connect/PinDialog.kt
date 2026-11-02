@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -116,14 +116,14 @@ fun PinDialog(
 @Composable
 private fun PinCells(pin: String) {
     val scheme = MaterialTheme.colorScheme
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.fillMaxWidth().widthIn(max = 320.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         repeat(PIN_LENGTH) { index ->
             val active = index == pin.length
             val shape = MaterialTheme.shapes.medium
             Box(
                 modifier = Modifier
-                    .width(40.dp)
-                    .height(52.dp)
+                    .weight(1f)
+                    .heightIn(min = 52.dp)
                     .clip(shape)
                     .background(if (index < pin.length) scheme.primaryContainer else scheme.surfaceContainerHighest)
                     .border(if (active) 2.dp else 0.dp, if (active) scheme.primary else Color.Transparent, shape),

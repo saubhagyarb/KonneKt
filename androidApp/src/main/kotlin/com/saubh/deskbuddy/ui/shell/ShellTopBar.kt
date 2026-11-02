@@ -44,7 +44,7 @@ fun ShellTopBar(
     val scheme = MaterialTheme.colorScheme
     val reconnecting = reconnectAttempt != null
     val status = if (reconnecting) {
-        stringResource(R.string.status_reconnecting, reconnectAttempt ?: 0)
+        stringResource(R.string.status_reconnecting, reconnectAttempt)
     } else {
         stringResource(R.string.status_connected)
     }
@@ -53,7 +53,7 @@ fun ShellTopBar(
         subtitle = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.size(8.dp).background(if (reconnecting) scheme.tertiary else scheme.primary, CircleShape))
-                Text(status, color = if (reconnecting) scheme.tertiary else scheme.primary)
+                Text(status, color = if (reconnecting) scheme.tertiary else scheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         },
         navigationIcon = {

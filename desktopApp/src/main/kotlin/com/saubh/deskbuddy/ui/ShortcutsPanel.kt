@@ -1,9 +1,11 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 
 package com.saubh.deskbuddy.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,7 +47,11 @@ fun ShortcutsPanel(controller: DesktopController) {
     val shortcuts = catalog.shortcutIds.mapNotNull { id -> catalog.apps.firstOrNull { it.id == id } }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             MediumButton("Add installed app", onClick = { pickerOpen = true }, icon = KonnektIcons.Add)
             MediumTonalButton(
                 "Browse for program",
@@ -62,7 +68,7 @@ fun ShortcutsPanel(controller: DesktopController) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                items(shortcuts, key = { it.id }) { app ->
+                items(shortcuts, key = { it.id }, contentType = { "shortcut" }) { app ->
                     ShortcutCard(app, onRemove = { controller.removeShortcut(app.id) })
                 }
             }
